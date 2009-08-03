@@ -1,0 +1,23 @@
+module="./pclta.o"
+device="pclta"
+group="root"
+mode="766"
+
+/sbin/rmmod ${device}
+#/sbin/insmod ${module} base_address=0x340,0xD800,0xD400 interrupt=9,10,10 verbose=1
+/sbin/insmod  ${module} base_address=0x360 pclta_interrupt=5 pclta_verbose=0
+#/sbin/insmod ${module} base_address=0x340 interrupt=5 verbose=0
+
+rm -f /dev/${device}[0-3]
+
+
+major="254"
+
+mknod /dev/${device}0 c ${major} 0
+#mknod /dev/${device}1 c ${major} 1
+#mknod /dev/${device}2 c ${major} 2
+#mknod /dev/${device}3 c ${major} 3 
+
+chgrp $group /dev/${device}?
+chmod $mode /dev/${device}?
+
