@@ -1,0 +1,2 @@
+ * General code cleanup
+ * remove C++ code so this works in pure C99
