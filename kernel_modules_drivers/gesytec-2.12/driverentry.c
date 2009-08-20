@@ -6,9 +6,9 @@ static int lpp_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
     int rc;
     uint minor;
     unsigned long plx_base;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-    struct class_device *class_dev;
-#endif
+// #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
+//     struct class_device *class_dev;
+// #endif
 
     dbg("%s(): pci_dev->vendor=%04X device=%04X\n  pci_device_id->vendor=%04X device=%04X",
         __FUNCTION__, 
@@ -72,7 +72,7 @@ static int lpp_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
         }
     if (minor >= MAX_DEVICES) 
         {
-        info ("Too many devices plugged in, can not handle this device.");
+        pr_info ("Too many devices plugged in, can not handle this device.");
         rc = -EINVAL;
         goto err_minor_table;
         }
@@ -89,12 +89,14 @@ static int lpp_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
 			"lpc/%d", minor);
 #endif
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-	class_dev = CLASS_DEVICE_CREATE(lpcclass, MKDEV(major, minor),
+	device_create(lpcclass, NULL, MKDEV(major, minor), NULL,  "lppdrv%u", minor-MAX_LPCS);
+
+/*	class_dev = CLASS_DEVICE_CREATE(lpcclass, MKDEV(major, minor),
 		NULL, "lppdrv%u", minor-MAX_LPCS);
     if (IS_ERR(class_dev)) 
         {
         err("class_device_create() -> failed");
-        }
+        }*/
 #endif
     dbg1("%s(): minor=%d return 0",
         __FUNCTION__, 
@@ -124,8 +126,8 @@ err_out_free:
 static void lpp_remove_one (struct pci_dev *pdev)
     {
 	DEV *dev = pci_get_drvdata(pdev);
-    dbg("%s(): dev=%08X pci_dev->vendor=%04X device=%04X",
-        __FUNCTION__, (uint)dev, 
+    dbg("%s(): dev=%p pci_dev->vendor=%04X device=%04X",
+        __FUNCTION__, dev,
         pdev->vendor, pdev->device);
 	if (!dev)  BUG();
 
@@ -145,9 +147,9 @@ static void lpp_remove_one (struct pci_dev *pdev)
     up (&minor_table_mutex);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-    class_device_destroy(lpcclass, MKDEV(major, dev->minor));
+    device_destroy(lpcclass, MKDEV(major, dev->minor));
 #endif
-    info(DRIVER_DESC " " DRIVER_DEV_NAME "%d now disconnected", dev->minor);
+    pr_info(DRIVER_DESC " " DRIVER_DEV_NAME "%d now disconnected", dev->minor);
     }
 
 
@@ -173,12 +175,12 @@ static int __init module_lpc_init(void)
   char c;
     
 //    if (!DbgInit())  return -ENOMEM;
-    info(DRIVER_DESC " " DRIVER_VERSION "  debug=%02X", debug);
+    pr_info(DRIVER_DESC " " DRIVER_VERSION "  debug=%02X", debug);
 
     ret = register_chrdev(major, DRIVER_DEV_NAME, &lpc_fops);
     if (ret < 0) 
         {
-        err("register_chrdev(major=%d, \"" DRIVER_DEV_NAME "\")=%d -> failed", major, ret);
+        pr_err("register_chrdev(major=%d, \"" DRIVER_DEV_NAME "\")=%d -> failed", major, ret);
 //        DbgExit();
         return ret;
         }
@@ -197,7 +199,7 @@ static int __init module_lpc_init(void)
     dbg("class_create(%s)=%p\n", CLASS_NAME, lpcclass);
 	if(IS_ERR(lpcclass)) 
         {
-		err("class_create(%s) failed\n", CLASS_NAME);
+		pr_err("class_create(%s) failed\n", CLASS_NAME);
         ret = -1;
 		goto out_unregister;
         }
@@ -271,7 +273,7 @@ static void __exit module_lpc_exit(void)
             for (minor = 0; minor < MAX_LPCS; ++minor) 
                 {
                 if (minor_table[minor])
-                    class_device_destroy(lpcclass, MKDEV(major, minor));
+                    device_destroy(lpcclass, MKDEV(major, minor));
                 }
             up (&minor_table_mutex);
             }
@@ -283,7 +285,7 @@ static void __exit module_lpc_exit(void)
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
     class_destroy(lpcclass);
 #endif
-    info("Unloading module " DRIVER_MOD_NAME " "DRIVER_VERSION);
+    pr_info("Unloading module " DRIVER_MOD_NAME " "DRIVER_VERSION);
 //    DbgExit();
     }
 

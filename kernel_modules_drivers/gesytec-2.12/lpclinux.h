@@ -119,6 +119,7 @@ typedef struct _DEVICE_EXTENSION {
     volatile u8 ctl;
     volatile u8 state;
     volatile u8 active;
+    struct device *device;
     u8  wtc_exist;
     u8  inbuf[NUM_INBUF][256];
     u8  outbuf[NUM_OUTBUF][256];

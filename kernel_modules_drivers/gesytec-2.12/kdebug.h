@@ -71,7 +71,7 @@ asmlinkage int DbgPrint(const char *fmt, ...);
     struct timeval tv; do_gettimeofday(&tv); \
     printk(KERN_DEBUG        /*__FILE__*/ DRIVER_MOD_NAME "%2u.%06u: " format "\n",        (int)(tv.tv_sec % 10), (int)tv.tv_usec, ## arg); } } while (0)
 
-#if 01
+#if 0
   #define dbg1(format, arg...) do { if (debug & 0x10) dbg(format, ## arg); } while (0)
   #define dbg2(format, arg...) do { if (debug & 0x20) dbg(format, ## arg); } while (0)
   #define dbg4(format, arg...) do { if (debug & 0x40) dbg(format, ## arg); } while (0)

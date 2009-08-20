@@ -105,7 +105,7 @@ static int downlink( DEV *dev )
 	int idx;
 	u32 cport, wport;
 
-    dbg8("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg8("%s(): dev=%p", __FUNCTION__, dev);
 
     cport = dev->cport;
 	wport = dev->wport;
@@ -152,7 +152,7 @@ static int uplink( DEV *dev )
     int idx;
     u32 cport, rport;
 
-    dbg8("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg8("%s(): dev=%p", __FUNCTION__, dev);
 
     cport = dev->cport;
     rport = dev->rport;
@@ -204,6 +204,7 @@ static int uplink( DEV *dev )
     return 0;
     }
 
+
 static int sm_lpc(register DEV *dev)
 {
 	u8  *p;
@@ -213,7 +214,7 @@ static int sm_lpc(register DEV *dev)
 	u16 idx;                  // avoid critical section
 	u32 cport,  rport, wport;
 
-    dbg4("  %s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg4("  %s(): dev=%p", __FUNCTION__, dev);
 
 	cport = dev->cport;
 	rport = dev->rport;
@@ -344,11 +345,11 @@ static int sm_lpc(register DEV *dev)
 static void DpcForIsr(unsigned long dev_addr)
     {
     DEV *dev = (DEV *) dev_addr;
-    dbg4(" %s(): dev=%08X active=%X", __FUNCTION__, (uint)dev, dev->active);
+    dbg4(" %s(): dev=%p active=%X", __FUNCTION__, dev, dev->active);
 
 	sm_stub(dev);
 
-    dbg4(" %s(): dev=%08X active=%X  return", __FUNCTION__, (uint)dev, dev->active);
+    dbg4(" %s(): dev=%p active=%X  return", __FUNCTION__, dev, dev->active);
     }
 
 
@@ -358,7 +359,7 @@ static BOOLEAN sm_stub( DEV *dev )
 //    int flags;
     u32 cport;
 
-    dbg4(" %s(): dev=%08X active=%X", __FUNCTION__, (uint)dev, dev->active);
+    dbg4(" %s(): dev=%p active=%X", __FUNCTION__, dev, dev->active);
 
     if (++dev->active > 1)
         {
@@ -379,9 +380,7 @@ static BOOLEAN sm_stub( DEV *dev )
             SETCTL;
             }
         } while (--dev->active > 0);
-
-    dev->drvtimer.expires = jiffies + HZ/5;
-    add_timer( &dev->drvtimer );
+    mod_timer(&dev->drvtimer, jiffies + HZ/5);
     return TRUE;
     }
 
@@ -396,7 +395,7 @@ static irqreturn_t lpc_isa_interrupt( int irq, void *ptr)
     dev = (DEV *)ptr;
     if( inb(dev->cport) & 8 ) return IRQ_NONE;		// Its not for me
 
-    dbg2("+ %s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg2("+ %s(): dev=%p", __FUNCTION__, dev);
 
     del_timer( &dev->drvtimer );
     outb(0, dev->rport);			// Clear interrupt flipflop (ISA)
@@ -407,7 +406,7 @@ static irqreturn_t lpc_isa_interrupt( int irq, void *ptr)
     sm_stub( dev );
 #endif
 
-    dbg2("- %s(): dev=%08X return", __FUNCTION__, (uint)dev);
+    dbg2("- %s(): dev=%p return", __FUNCTION__, dev);
 	return IRQ_HANDLED;
     }
 
@@ -427,7 +426,7 @@ static irqreturn_t lpc_pci_interrupt( int irq, void *ptr)
     if (IntCsr == 0xFFFF)  return IRQ_NONE;		// Can't read PLX
     if (inb(dev->cport) & 8)  return IRQ_NONE;		// Its not for me
 
-    dbg2("+ %s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg2("+ %s(): dev=%p", __FUNCTION__, dev);
 
     del_timer( &dev->drvtimer );
 
@@ -445,7 +444,7 @@ static irqreturn_t lpc_pci_interrupt( int irq, void *ptr)
     sm_stub(dev);
 #endif
 
-    dbg2("- %s(): dev=%08X return", __FUNCTION__, (uint)dev);
+    dbg2("- %s(): dev=%p return", __FUNCTION__, dev);
     return IRQ_HANDLED;
     }
 #endif
@@ -454,10 +453,10 @@ static void lpc_timer( unsigned long ptr )
     {
     DEV *dev = (DEV *)ptr;
 
-    dbg1("+ %s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg1("+ %s(): dev=%p", __FUNCTION__, dev);
     sm_stub(dev);
 
-    dbg1("- %s(): dev=%08X return", __FUNCTION__, (uint)dev);
+    dbg1("- %s(): dev=%p return", __FUNCTION__, dev);
     }
 
 static ssize_t lpc_write( struct file *file, const char *buf,
@@ -469,7 +468,7 @@ static ssize_t lpc_write( struct file *file, const char *buf,
 //	int flags;
 	register DEV *dev = (DEV *)(file->private_data);
 
-    dbg1("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg1("%s(): dev=%p", __FUNCTION__, dev);
 //    DbgFlush();
 
 	if(count < 0) return -EINVAL;
@@ -481,7 +480,7 @@ static ssize_t lpc_write( struct file *file, const char *buf,
 	if(idx == dev->outhead)
         {
 //		STI;
-        dbg1("%s(): dev=%08X  return -EWOULDBLOCK", __FUNCTION__, (uint)dev);
+        dbg1("%s(): dev=%p  return -EWOULDBLOCK", __FUNCTION__, dev);
 		return -EWOULDBLOCK;
         }
 //	STI;
@@ -506,7 +505,7 @@ static ssize_t lpc_write( struct file *file, const char *buf,
 		del_timer( &dev->drvtimer );
 		sm_stub( dev );
         }
-    dbg1("%s(): dev=%08X  return %d", __FUNCTION__, (uint)dev, len);
+    dbg1("%s(): dev=%p  return %d", __FUNCTION__, dev, len);
 	return len;
     }
 
@@ -521,7 +520,7 @@ static ssize_t lpc_read( struct file *file, char *buf,
 	register DEV *dev = (DEV *)(file->private_data);
 	if(count < 0) return -EINVAL;
 
-    dbg1("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg1("%s(): dev=%p", __FUNCTION__, dev);
 //    DbgFlush();
 
 	idx = dev->inhead;
@@ -557,7 +556,7 @@ static ssize_t lpc_read( struct file *file, char *buf,
 //        if (wait_event_interruptible(dev->rd_wait, qhasdata(&dev->ReadBufferQueue)))
         if (wait_event_interruptible(dev->rd_wait, (idx != dev->intail) ))
             {
-            dbg1("%s(): dev=%08X  return -ERESTARTSYS", __FUNCTION__, (uint)dev);
+            dbg1("%s(): dev=%p  return -ERESTARTSYS", __FUNCTION__, dev);
             return -ERESTARTSYS; /* signal: tell the fs layer to handle it */
             }
         dbg8("%s(): nach wait_event_interruptible(rd_wait)", __FUNCTION__);
@@ -586,7 +585,7 @@ static ssize_t lpc_read( struct file *file, char *buf,
 	if(idx >= NUM_INBUF) idx = 0;
 	dev->inhead = idx;
 
-    dbg1("%s(): dev=%08X  return %d", __FUNCTION__, (uint)dev, count);
+    dbg1("%s(): dev=%p  return %d", __FUNCTION__, dev,(int) count);
 	return count;
     }
 
@@ -596,7 +595,7 @@ static unsigned lpc_poll( struct file *file, struct poll_table_struct *wait)
     DEV *dev = file->private_data;
     unsigned mask = 0;
 
-    dbg1("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg1("%s(): dev=%p", __FUNCTION__, dev);
 //    DbgFlush();
 
     poll_wait( file, &dev->rd_wait, wait);
@@ -610,7 +609,7 @@ static int initialize_isacard( DEV *dev, int index )
 	u32 cport, rport;
 	int irq;
 
-    dbg1("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg1("%s(): dev=%p", __FUNCTION__, dev);
 /*
 	if( !lpcs[index] ) {
 		err( "invalid minor number %d\n", index );
@@ -695,7 +694,7 @@ static int initialize_isacard( DEV *dev, int index )
 #ifndef NO_PCI
 static int initialize_pcicard( DEV *dev, int index )
     {
-    dbg1("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg1("%s(): dev=%p", __FUNCTION__, dev);
         {
 #if 0
         u32  PlxIntCsrPort, cport, rport, wtcport, rtr;
@@ -976,7 +975,7 @@ int lpc_watcher( DEV* dev, u8* buf )
 	u8  xcvr, cmd, tmp;
 	int t;
 
-    dbg1("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg1("%s(): dev=%p", __FUNCTION__, dev);
 
 	cport   = dev->cport;
 	wtcport = dev->wtcport;
@@ -1108,7 +1107,7 @@ static int lpc_ioctl(struct inode *inode, struct file *file,
 	register DEV *dev = (DEV *)(file->private_data);
     char tmpBuf[80];
 
-    dbg1("%s(): dev=%08X", __FUNCTION__, (uint)dev);
+    dbg1("%s(): dev=%p", __FUNCTION__, dev);
 
 	switch( cmd )
 	{
@@ -1134,9 +1133,9 @@ int lpc_init( void )
     u32 iobase, cport, rport;
     int irq;
     int rc = -ENODEV;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-    struct class_device *class_dev;
-#endif
+// #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
+//     struct class_device *class_dev;
+// #endif
     dbg1("%s():", __FUNCTION__);
 
     for( i=0; i<MAX_LPCS; i++ )
@@ -1198,7 +1197,7 @@ int lpc_init( void )
                 }
             if (minor >= MAX_LPCS)
                 {
-                info ("Too many devices plugged in, can not handle this device.");
+                pr_info ("Too many devices plugged in, can not handle this device.");
                 rc = -EINVAL;
                 goto err_minor_table;
                 }
@@ -1229,12 +1228,15 @@ int lpc_init( void )
             up (&minor_table_mutex);
 
  #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,5,0)
-           class_dev = CLASS_DEVICE_CREATE(lpcclass, MKDEV(major, minor),
-                NULL, "lpcdrv%u", minor);
-            if (IS_ERR(class_dev))
-                {
-                err("class_device_create() -> failed");
-                }
+	    dev->device = device_create(lpcclass, NULL, MKDEV(major, minor), NULL,  "lppdrv%u", minor-MAX_LPCS);
+	    if (!dev->device)
+	       err( "device_create failed for lppdrv\n");
+//            class_dev = CLASS_DEVICE_CREATE(lpcclass, MKDEV(major, minor),
+//                 NULL, "lpcdrv%u", minor);
+//             if (IS_ERR(class_dev))
+//                 {
+//                 err("class_device_create() -> failed");
+//                 }
 #endif
 
             rc = 0;     // found on or more devices
