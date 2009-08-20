@@ -1,0 +1,10 @@
+# /etc/udev/rules.d/25-easylon.rules
+
+# Easylon
+KERNEL=="lpcdrv*",		NAME="lon/%k", GROUP="tty", MODE="666"
+KERNEL=="lppdrv*",		NAME="lon/%k", GROUP="tty", MODE="666"
+KERNEL=="lonusb*",		NAME="lon/%k", GROUP="tty", MODE="666", OPTIONS="last_rule"
+
+#KERNEL=="pty[pqrstuvwxyzabcdef][0123456789abcdef]", NAME="%k", GROUP="tty", MODE="666", OPTIONS="last_rule"
+#KERNEL=="tty[0-9]*",		NAME="%k", GROUP="tty", MODE="620", OPTIONS="last_rule"
+#KERNEL=="ptmx",			NAME="%k", GROUP="tty", MODE="666"
